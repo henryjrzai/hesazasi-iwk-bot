@@ -55,22 +55,31 @@ def summarize_with_gemini(commits_text):
 
     client = genai.Client(api_key=GEMINI_API_KEY)
     
+    # Mendapatkan hari dan tanggal hari ini dalam Bahasa Indonesia
+    days = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
+    months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
+    now = datetime.now()
+    hari_ini = days[now.weekday()]
+    tanggal_ini = f"{now.day} {months[now.month - 1]} {now.year}"
+    
     system_prompt = (
-        "Anda adalah asisten pengembang perangkat lunak senior yang profesional. "
-        "Tugas Anda adalah merangkum daftar pesan komit mentah menjadi laporan harian yang ringkas dalam Bahasa Indonesia. "
-        "Abaikan komit yang terlalu minor seperti 'update readme', 'typo', atau 'bump version'. "
-        "Kelompokkan rangkuman ke dalam kategori seperti: Perbaikan Bug, Penambahan Fitur, Refaktor, dll. "
-        "Gunakan poin-poin (bullet points) dan pastikan nada bicara profesional namun mudah dibaca."
+        f"Anda adalah asisten pengembang perangkat lunak senior yang profesional. "
+        f"Tugas Anda adalah merangkum daftar pesan komit mentah menjadi laporan harian untuk Project Manager dalam Bahasa Indonesia yang formal.\n\n"
+        f"Aturan Penulisan:\n"
+        f"1. Baris pertama WAJIB berisi: 'Laporan Aktivitas Harian - {hari_ini}, {tanggal_ini}'.\n"
+        f"2. Kelompokkan rangkuman berdasarkan repositori sesuai input (gunakan format: ### [Nama Repo]).\n"
+        f"3. Fokus pada perubahan fungsionalitas, perbaikan bug, atau optimasi. Abaikan komit minor (typo, readme, dll).\n"
+        f"4. Setiap poin pekerjaan menggunakan bullet point '*' dan WAJIB diakhiri dengan frase ' - done'.\n"
+        f"5. Gunakan bahasa yang profesional dan mudah dipahami oleh Project Manager (hindari jargon teknis yang terlalu mentah)."
     )
     
     try:
-        # Menggunakan model gemini-2.5-flash (silakan ganti ke 2.5 jika tersedia)
         response = client.models.generate_content(
             model=GEMINI_MODEL,
-            contents=f"Berikut adalah daftar pesan komit saya:\n\n{commits_text}",
+            contents=f"Berikut adalah daftar pesan komit saya yang dikelompokkan per repo:\n\n{commits_text}",
             config={
                 "system_instruction": system_prompt,
-                "temperature": 0.2
+                "temperature": 0.3
             }
         )
         return response.text
@@ -95,20 +104,28 @@ def send_to_telegram(message):
 
 def main():
     since = get_time_range()
-    all_commit_messages = []
+    formatted_input = []
     
     print(f"Memulai ekstraksi komit sejak {since}...")
     
     for repo in REPOSITORIES:
+        repo_name_only = repo.split("/")[-1]
         print(f"Memeriksa repositori: {repo}")
         messages = fetch_commits(repo, since)
-        all_commit_messages.extend(messages)
+        
+        if messages:
+            repo_block = f"### REPOSITORY: {repo_name_only}\n"
+            repo_block += "\n".join([f"- {m}" for m in messages])
+            formatted_input.append(repo_block)
     
-    # Gabungkan semua pesan menjadi satu teks besar
-    combined_text = "\n".join([f"- {m}" for m in all_commit_messages])
-    
-    print("Merangkum dengan AI...")
-    summary = summarize_with_gemini(combined_text)
+    if not formatted_input:
+        print("Tidak ada komit baru di semua repositori.")
+        summary = "Tidak ada aktivitas komit yang ditemukan dalam 12 jam terakhir."
+    else:
+        # Gabungkan semua blok repo dengan pemisah baris baru
+        combined_input = "\n\n".join(formatted_input)
+        print("Merangkum dengan AI...")
+        summary = summarize_with_gemini(combined_input)
     
     print("Mengirim ke Telegram...")
     send_to_telegram(summary)
