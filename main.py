@@ -15,6 +15,7 @@ GH_PAT = os.getenv("GH_PAT")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")  # Default ke model flash jika tidak ditentukan
 
 # Username GitHub Anda (Gunakan secret GH_USERNAME jika berbeda dengan akun tempat bot berada)
 GITHUB_USERNAME = os.getenv("GH_USERNAME") or os.getenv("GH_REPOSITORY_OWNER")
@@ -63,9 +64,9 @@ def summarize_with_gemini(commits_text):
     )
     
     try:
-        # Menggunakan model gemini-2.0-flash (silakan ganti ke 2.5 jika tersedia)
+        # Menggunakan model gemini-2.5-flash (silakan ganti ke 2.5 jika tersedia)
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model=GEMINI_MODEL,
             contents=f"Berikut adalah daftar pesan komit saya:\n\n{commits_text}",
             config={
                 "system_instruction": system_prompt,
