@@ -11,13 +11,13 @@ REPOSITORIES = [
 ]
 
 # Variabel Lingkungan (Akan diisi oleh GitHub Secrets)
-GITHUB_PAT = os.getenv("GITHUB_PAT")
+GH_PAT = os.getenv("GH_PAT")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-# Username GitHub Anda (Gunakan secret GITHUB_USERNAME jika berbeda dengan akun tempat bot berada)
-GITHUB_USERNAME = os.getenv("GITHUB_USERNAME") or os.getenv("GITHUB_REPOSITORY_OWNER")
+# Username GitHub Anda (Gunakan secret GH_USERNAME jika berbeda dengan akun tempat bot berada)
+GITHUB_USERNAME = os.getenv("GH_USERNAME") or os.getenv("GH_REPOSITORY_OWNER")
 
 def get_time_range():
     """Mendapatkan waktu sekarang dan 12 jam yang lalu dalam format ISO 8601."""
@@ -29,7 +29,7 @@ def fetch_commits(repo, since):
     """Mengambil pesan komit dari GitHub API."""
     url = f"https://api.github.com/repos/{repo}/commits"
     headers = {
-        "Authorization": f"Bearer {GITHUB_PAT}",
+        "Authorization": f"Bearer {GH_PAT}",
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28"
     }
