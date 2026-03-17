@@ -5,7 +5,10 @@ from google import genai
 
 # --- KONFIGURASI ---
 # Tambahkan daftar repositori yang ingin Anda pantau (format: "owner/repo")
-REPOSITORIES = ["username/repo1", "username/repo2"]
+REPOSITORIES = [
+    "iweka-dev/nursery-oil-palm-be", 
+    "iweka-dev/admin-be"
+]
 
 # Variabel Lingkungan (Akan diisi oleh GitHub Secrets)
 GITHUB_PAT = os.getenv("GITHUB_PAT")
