@@ -16,13 +16,22 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openrouter/free")
 
+def get_lookback_hours():
+    raw_value = os.getenv("LOOKBACK_HOURS", "12")
+    try:
+        return max(1, int(raw_value))
+    except ValueError:
+        return 12
+
+LOOKBACK_HOURS = get_lookback_hours()
+
 # Username GitHub Anda (Gunakan secret GH_USERNAME jika berbeda dengan akun tempat bot berada)
 GITHUB_USERNAME = os.getenv("GH_USERNAME") or os.getenv("GH_REPOSITORY_OWNER")
 
 def get_time_range():
-    """Mendapatkan waktu sekarang dan 12 jam yang lalu dalam format ISO 8601."""
+    """Mendapatkan waktu sekarang dan rentang jam ke belakang dalam format ISO 8601."""
     now = datetime.now(timezone.utc)
-    since = now - timedelta(hours=12)
+    since = now - timedelta(hours=LOOKBACK_HOURS)
     return since.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 def fetch_commits(repo, since):
@@ -50,7 +59,7 @@ def fetch_commits(repo, since):
 def summarize_with_openrouter(commits_text):
     """Merangkum pesan komit menggunakan OpenRouter Chat Completions API."""
     if not commits_text.strip():
-        return "Tidak ada aktivitas komit yang ditemukan dalam 12 jam terakhir."
+        return f"Tidak ada aktivitas komit yang ditemukan dalam {LOOKBACK_HOURS} jam terakhir."
     
     # Mendapatkan hari dan tanggal hari ini dalam Bahasa Indonesia
     days = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
@@ -129,7 +138,7 @@ def main():
     
     if not formatted_input:
         print("Tidak ada komit baru di semua repositori.")
-        summary = "Tidak ada aktivitas komit yang ditemukan dalam 12 jam terakhir."
+        summary = f"Tidak ada aktivitas komit yang ditemukan dalam {LOOKBACK_HOURS} jam terakhir."
     else:
         # Gabungkan semua blok repo dengan pemisah baris baru
         combined_input = "\n\n".join(formatted_input)
