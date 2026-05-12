@@ -17,7 +17,7 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openrouter/free")
 
 def get_lookback_hours():
-    raw_value = os.getenv("LOOKBACK_HOURS", "12")
+    raw_value = os.getenv("LOOKBACK_HOURS", "937")
     try:
         return max(1, int(raw_value))
     except ValueError:
