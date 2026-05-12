@@ -1,7 +1,6 @@
 import os
 import requests
 from datetime import datetime, timedelta, timezone
-from google import genai
 
 # --- KONFIGURASI ---
 # Tambahkan daftar repositori yang ingin Anda pantau (format: "owner/repo")
@@ -12,10 +11,10 @@ REPOSITORIES = [
 
 # Variabel Lingkungan (Akan diisi oleh GitHub Secrets)
 GH_PAT = os.getenv("GH_PAT")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")  # Default ke model flash jika tidak ditentukan
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openrouter/free")
 
 # Username GitHub Anda (Gunakan secret GH_USERNAME jika berbeda dengan akun tempat bot berada)
 GITHUB_USERNAME = os.getenv("GH_USERNAME") or os.getenv("GH_REPOSITORY_OWNER")
@@ -48,12 +47,10 @@ def fetch_commits(repo, since):
         print(f"Error saat mengambil komit dari {repo}: {e}")
         return []
 
-def summarize_with_gemini(commits_text):
-    """Merangkum pesan komit menggunakan SDK google-genai."""
+def summarize_with_openrouter(commits_text):
+    """Merangkum pesan komit menggunakan OpenRouter Chat Completions API."""
     if not commits_text.strip():
         return "Tidak ada aktivitas komit yang ditemukan dalam 12 jam terakhir."
-
-    client = genai.Client(api_key=GEMINI_API_KEY)
     
     # Mendapatkan hari dan tanggal hari ini dalam Bahasa Indonesia
     days = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
@@ -74,17 +71,29 @@ def summarize_with_gemini(commits_text):
     )
     
     try:
-        response = client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=f"Berikut adalah daftar pesan komit saya yang dikelompokkan per repo:\n\n{commits_text}",
-            config={
-                "system_instruction": system_prompt,
-                "temperature": 0.3
-            }
-        )
-        return response.text
+        url = "https://openrouter.ai/api/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": OPENROUTER_MODEL,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {
+                    "role": "user",
+                    "content": f"Berikut adalah daftar pesan komit saya yang dikelompokkan per repo:\n\n{commits_text}"
+                }
+            ],
+            "temperature": 0.3
+        }
+
+        response = requests.post(url, headers=headers, json=payload, timeout=60)
+        response.raise_for_status()
+        data = response.json()
+        return data["choices"][0]["message"]["content"]
     except Exception as e:
-        return f"Gagal merangkum dengan Gemini: {e}"
+        return f"Gagal merangkum dengan OpenRouter: {e}"
 
 def send_to_telegram(message):
     """Mengirim pesan ke Telegram Bot API."""
@@ -125,7 +134,7 @@ def main():
         # Gabungkan semua blok repo dengan pemisah baris baru
         combined_input = "\n\n".join(formatted_input)
         print("Merangkum dengan AI...")
-        summary = summarize_with_gemini(combined_input)
+        summary = summarize_with_openrouter(combined_input)
     
     print("Mengirim ke Telegram...")
     send_to_telegram(summary)
